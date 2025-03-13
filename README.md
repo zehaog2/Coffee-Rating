@@ -51,6 +51,7 @@ Analyze datasets related to coffee/chocolate, cocoa
 1. Agtron: left one for whole bean and right one for ground coffee.
 2. Est. Price: Need to standardize units.
 3. Review Date: Need to be transformed into dates instead of strings.
+4. Roaster Location / Coffee Origin: Seperate by comma.
 
 
 
