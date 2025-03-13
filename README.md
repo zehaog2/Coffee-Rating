@@ -6,7 +6,7 @@ Analyze datasets related to coffee/chocolate, cocoa
 
 2. (03/10-Xin) Parsed the raw text data and saved into dataframe. [Visit Text Parsing Codes](Coffee_Review_Text_Extraction.ipynb)
 
-**Variables Description:**
+## Variables Description
 
 | Variable Name | Data type | Description | Number of missing values |
 |:-------:|:----------:|----------|:----------:|
