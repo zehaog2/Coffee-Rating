@@ -1,0 +1,52 @@
+---
+title: "Coffee Review Preliminary Results"
+author: "Xin Wang"
+date: "2025-03-13"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(LANG = "en")
+```
+
+```{r}
+library(tidyverse)
+```
+
+# Load data
+
+```{r}
+data <- read.csv("../data/coffee_reviews_parsed.csv") 
+```
+```{r}
+unique(data$Roast.Level)
+```
+
+
+```{r Manipulate Roast Level column}
+# Replace empty strings with NA
+data$Roast.Level[data$Roast.Level == ""] <- NA
+
+# Convert to an ordered factor (ensure column name is correct)
+data$Roast.Level <- factor(
+  data$Roast.Level, 
+  levels = c("Light", "Medium-Light", "Medium", "Medium-Dark", "Dark", "Very Dark"), 
+  ordered = TRUE
+)
+```
+
+
+```{r}
+data |>
+  filter(!is.na(data$Roast.Level)) |>
+  ggplot(aes(x = Roast.Level, y = Rating)) + 
+  geom_boxplot(na.rm=TRUE) + 
+  labs(
+    x = "Roast Level",
+    y = "Overall Rating",
+    title = "Lighter roast level tends to get a higher rating."
+  )
+```
+
+
