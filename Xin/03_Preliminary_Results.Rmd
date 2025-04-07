@@ -19,6 +19,15 @@ library(tidyverse)
 ```{r}
 data <- read.csv("../data/coffee_reviews_parsed.csv") 
 ```
+
+# Data processing
+
+## Roast Level
+
+- Replace "" with NA
+
+- Convert roast level into an ordinal variable
+
 ```{r}
 unique(data$Roast.Level)
 ```
@@ -36,9 +45,34 @@ data$Roast.Level <- factor(
 )
 ```
 
+## Deal with Agtron column
+```{r}
+# Check if every cell follows "1/1" pattern
+data <- data |>
+  mutate(agtron_is_valid_format = grepl("^\\d+/\\d+$", Agtron)) 
+
+data |>
+  filter(agtron_is_valid_format == FALSE)
+```
+
+```{r warning=FALSE}
+df <- data |>
+  separate(Agtron, into = c("Agtron_whole", "Agtron_ground"), sep="/") |>
+  mutate(
+    Agtron_whole = as.numeric(Agtron_whole),
+    Agtron_ground = as.numeric(Agtron_ground)
+  )
+```
 
 ```{r}
-data |>
+
+```
+
+
+# EDA
+## Roast level vs Rating
+```{r}
+df |>
   filter(!is.na(data$Roast.Level)) |>
   ggplot(aes(x = Roast.Level, y = Rating)) + 
   geom_boxplot(na.rm=TRUE) + 
