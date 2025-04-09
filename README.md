@@ -15,7 +15,7 @@ Analyze datasets related to coffee/chocolate, cocoa
 | Rating  | float  | Overall rating of the coffee. [Detailed interpretation](https://www.coffeereview.com/interpret-coffee/)  | 5 |
 | Roaster  | str  | Name of the roaster company  | 5 |
 | Coffee Name  | str  | Name of the coffee  | 5 |
-| Roaster Location  | str  | Location of the roaster  | 104 |
+| Roaster Location  | str  | Location of the roaster  | 106 |
 | Coffee Origin  | str  | Origin of the beans  | 572 |
 | Roast Level  | str  | Type of the roast (Light, Medium-Light, Medium, Medium-Dark, Dark) | 103 |
 | Agtron  | str  | This variable contains 2 values: the left one indicates the Agtron reading for Whole Bean and the right one indicates the Agtron reading for Ground. An Agtron machine reflects light on a sample of coffee in order to objectively and accurately assign a number to the beans’ roast color.  The smaller the number, the darker the roast. How to Interpret Agtron Values: Dark Roast: Agtron 0-35 (very dark brown to almost black); Medium Roast: Agtron 35-55 (medium brown); Light Roast: Agtron 55-100 (lighter shades of brown to cinnamon-like colors). | 103 |
