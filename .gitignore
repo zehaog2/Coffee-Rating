@@ -1,2 +1,10 @@
 coffee_reviews_text/
-data/
+
+# Ignore some data
+data/FAOSTAT_coffee.csv
+data/FoodImports.csv
+data/inconsistent_roaster_location.csv
+data/roaster_location_1.csv
+data/coffee_review_processed_0409.csv
+data/coffee_origins.csv
+data/coffee_review_raw_texts.csv
