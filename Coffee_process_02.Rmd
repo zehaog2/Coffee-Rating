@@ -21,8 +21,8 @@ coffee <- read_csv("~/Desktop/coffee_review_processed_01.csv")
 Finding most popular Coffee Origins
 ```{r}
 coffee <- coffee %>%
-  mutate(coffee_origin_lower = tolower(`Coffee Origin`))
-
+  mutate(coffee_origin_lower = tolower(`Coffee Origin`)) %>% 
+  mutate(roast_level = tolower(`Roast Level`))
 
 top_words <- coffee %>%
   unnest_tokens(word, coffee_origin_lower) %>%
@@ -100,9 +100,33 @@ coffee <- coffee %>%
   ))
 ```
 
+Roast Level Adjustment
+```{r}
+coffee <- coffee %>%
+  mutate(roast_lv_adj = case_when(
+    roast_level == "very dark" ~ 6,
+    roast_level == "dark" ~ 5,
+    roast_level == "medium-dark" ~ 4,
+    roast_level == "medium" ~ 3,
+    roast_level == "medium-light" ~ 2,
+    roast_level == "light" ~ 1,
+    TRUE ~ NA_real_ 
+  ))
+```
+Coffee name with 100%
+```{r}
+coffee <- coffee %>%
+  mutate(coffee_name_hundredpercent =str_detect(`Coffee Name`, "100"))
+```
+
+Review data from character to date-time.
+```{r}
+coffee <- coffee %>%
+  mutate(review_date_adj = as.Date(paste("01", `Review Date`), format = "%d %B %Y"))
+```
 
 ```{r}
-coffee_test <- coffee %>%
-  select(-`URL`, -`all_text`,-`Agtron`,-`Est. Price`, -`coffee_origin_lower`,-`coffee_origin`,-`Est. Price`,)
-write_csv(coffee_test, "~/Desktop/coffee_test.csv")
+coffee_ultimato <- coffee %>%
+  select( -`all_text`,-`Agtron`,-`Est. Price`,-`Roast Level`, -`roast_level`,-`coffee_origin_lower`,-`coffee_origin`,-`Est. Price`,-`Review Date`)
+write_csv(coffee_test, "~/Desktop/coffee_ultimato.csv")
 ```
