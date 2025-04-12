@@ -1,0 +1,108 @@
+---
+title: "Coffee_review_processed_02"
+author: "Henry Guo"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, tidy.opts = list(width.cutoff = 300))
+```
+
+```{r}
+library("easypackages")                                             
+libraries("tidyverse","ggthemes",
+          "ggplot2", "scales", "dplyr", "readr", "stringr","tidytext",
+          "tidyr", "DBI", "RSQLite")
+coffee <- read_csv("~/Desktop/coffee_review_processed_01.csv")
+```
+
+Finding most popular Coffee Origins
+```{r}
+coffee <- coffee %>%
+  mutate(coffee_origin_lower = tolower(`Coffee Origin`))
+
+
+top_words <- coffee %>%
+  unnest_tokens(word, coffee_origin_lower) %>%
+  count(word, sort = TRUE) %>%
+  slice_head(n = 100)
+top_words
+```
+
+Here are the countries / regions where it appeared more than 100 times:ethiopia, columbia, kenya, guatemala, yirgacheffe (ethiopia), indonesia, costa rica, sumatra (indonesia), brazil, panama, sidamo (ethiopia), oromia(ethiopia), guji(ethiopia), salvador, boquete(panama), nyeri (kenya), huila (columbia), kona (hawaii), rwanda, cauca (columb), sidama (ethiopia), honduras, huehuetenango (guatemala), nicaragua, peru, hawaii, hawai'i, mexico, tarrazu (costa rica), gerais (brazil), guinea, papua (guinea), aceh (indonesia), antigua
+
+Below are coffee_origin categorized. Please adjust if you see fit.
+```{r}
+coffee <- coffee %>%
+  mutate(coffee_origin = str_replace_all(coffee_origin_lower, "[^[:alnum:]]", "")) %>% 
+  mutate(coffee_origin_adj = case_when(
+    str_detect(coffee_origin, "colomb") ~ "colombia",
+    str_detect(coffee_origin, "brazil") ~ "brazil",
+    str_detect(coffee_origin, "guatem") ~ "guatemala",
+    str_detect(coffee_origin, "kenya") ~ "kenya",
+    str_detect(coffee_origin, "ethiopia") ~ "ethiopia",
+    str_detect(coffee_origin, "yirgacheffe") ~ "ethiopia",
+    str_detect(coffee_origin, "indo") ~ "indonesia",
+    str_detect(coffee_origin, "costa") ~ "costa rica",
+    str_detect(coffee_origin, "rica") ~ "costa rica",
+    str_detect(coffee_origin, "sumatra") ~ "indonesia",
+    str_detect(coffee_origin, "sidamo") ~ "ethiopia",
+    str_detect(coffee_origin, "oromia") ~ "ethiopia",
+    str_detect(coffee_origin, "guji") ~ "ethiopia",
+    str_detect(coffee_origin, "salvador") ~ "salvador",
+    str_detect(coffee_origin, "boquete") ~ "panama",
+    str_detect(coffee_origin, "panama") ~ "panama",
+    str_detect(coffee_origin, "nyeri") ~ "kenya",
+    str_detect(coffee_origin, "huila") ~ "colombia",
+    str_detect(coffee_origin, "kona") ~ "hawaii",
+    str_detect(coffee_origin, "rwan") ~ "rwanda",
+    str_detect(coffee_origin, "cauca") ~ "colombia",
+    str_detect(coffee_origin, "hondu") ~ "honduras",
+    str_detect(coffee_origin, "huehuetenango") ~ "guatemala",
+    str_detect(coffee_origin, "nicaragua") ~ "nicaragua",
+    str_detect(coffee_origin, "peru") ~ "peru",
+    str_detect(coffee_origin, "hawa") ~ "hawaii",
+    str_detect(coffee_origin, "mexico") ~ "mexico",
+    str_detect(coffee_origin, "tarrazu") ~ "costa rica",
+    str_detect(coffee_origin, "gerais") ~ "brazil",
+    str_detect(coffee_origin, "guinea") ~ "australia",
+    str_detect(coffee_origin, "australia") ~ "australia",
+    str_detect(coffee_origin, "papua") ~ "australia",
+    str_detect(coffee_origin, "aceh") ~ "indonesia",
+    str_detect(coffee_origin, "antigua") ~ "antigua",
+    str_detect(coffee_origin, "cong") ~ "congo",
+    str_detect(coffee_origin, "puert") ~ "peurto rico",
+    str_detect(coffee_origin, "yemen") ~ "yemen",
+    str_detect(coffee_origin, "taiwan") ~ "taiwan",
+    str_detect(coffee_origin, "china") ~ "china",
+    str_detect(coffee_origin, "india") ~ "india",
+    str_detect(coffee_origin, "philippine") ~ "philippines",
+    str_detect(coffee_origin, "jamaica") ~ "jamaica",
+    str_detect(coffee_origin, "bolivia") ~ "bolivia",
+    str_detect(coffee_origin, "haiti") ~ "haiti",
+    str_detect(coffee_origin, "kayanza") ~ "burundi",
+    str_detect(coffee_origin, "burundi") ~ "burundi",
+    str_detect(coffee_origin, "thai") ~ "thailand",
+    str_detect(coffee_origin, "viet") ~ "vietnam",
+    str_detect(coffee_origin, "cali") ~ "united states",
+    str_detect(coffee_origin, "tanzania") ~ "tanzania",
+    str_detect(coffee_origin, "ecuador") ~ "ecuador",
+    str_detect(coffee_origin, "uganda") ~ "uganda",
+    str_detect(coffee_origin, "zimbab") ~ "zimbabwe",
+    str_detect(coffee_origin, "zambia") ~ "zambia",
+    str_detect(coffee_origin, "dominic") ~ "dominican republic",
+    str_detect(coffee_origin, "disclose") ~ "NA",
+    str_detect(coffee_origin, "NA") ~ "NA",
+    #TRUE ~ coffee_origin
+    TRUE ~ "others"
+  ))
+```
+
+
+```{r}
+coffee_test <- coffee %>%
+  select(-`URL`, -`all_text`,-`Agtron`,-`Est. Price`, -`coffee_origin_lower`,-`coffee_origin`,-`Est. Price`,)
+write_csv(coffee_test, "~/Desktop/coffee_test.csv")
+```
