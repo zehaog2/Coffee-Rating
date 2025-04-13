@@ -183,40 +183,31 @@ ggplot(tfidf_top, aes(x = reorder_within(word, tf_idf, document), y = tf_idf, fi
 coffee <- coffee %>%
   mutate(review_id = row_number())
 
-# 2. Pivot the comment columns into long format.
-#    Retain review_id and Rating (assuming the Rating column is named exactly "Rating").
+#Pivot the comment columns into long format.
 coffee_long <- coffee %>%
   pivot_longer(cols = c(A, B, C, D),
                names_to = "document",
                values_to = "text")
 
-# 3. Tokenize the text and remove stop words:
 tokens <- coffee_long %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words, by = "word")
 
-# 4. Count words in each review & document (each review's comment):
 token_counts <- tokens %>%
   count(review_id, document, word, sort = TRUE)
 
-# 5. Compute TF-IDF.
-#    Here we treat each review (review_id) as a document. If you prefer to compute it separately for each comment column,
-#    you could use a composite key (e.g., paste(review_id, document, sep = "_")). For now, we assume review-level TF-IDF:
 tfidf_data <- token_counts %>%
   bind_tf_idf(word, review_id, n)
 
-# 6. Summarize text features per review and per comment type.
-#    For example, calculate average TF-IDF (you could also compute total TF-IDF, etc.).
+# Summarize text features per review and per comment type.
 review_features <- tfidf_data %>%
   group_by(review_id, document) %>%
   summarise(avg_tf_idf = mean(tf_idf), .groups = "drop")
 
-# 7. Join these text features back with the original ratings.
 coffee_features <- coffee %>%
   select(review_id, Rating) %>%
   left_join(review_features, by = "review_id")
 
-# 8. Visualize the relationship between average TF-IDF and Rating for each comment column.
 ggplot(coffee_features, aes(x = avg_tf_idf, y = Rating)) +
   geom_point(alpha = 0.5) +
   geom_smooth(method = "lm") +
@@ -227,47 +218,36 @@ ggplot(coffee_features, aes(x = avg_tf_idf, y = Rating)) +
 TF-IDF per review per comment type creates a numeric value representing the importance of words in the comments. We see that in A,B,C, reviewers tend to give lower ratings when using more distinctive language in the comment, and vice versa.
 
 ```{r}
- # 1. Create a unique review id if you don't have one already.
 coffee <- coffee %>%
   mutate(review_id = row_number())
 
-# 2. Pivot comment columns (A, B, C, D) into long format.
 coffee_long <- coffee %>%
   pivot_longer(cols = c(A, B, C, D),
                names_to = "document",
                values_to = "text")
 
-# 3. Tokenize and remove stop words:
 tokens <- coffee_long %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words, by = "word")
 
-# (Optional) Remove tokens containing numbers from specific documents if needed.
 tokens <- tokens %>%
   filter(!(document == "B" & str_detect(word, "\\d")))
 
-# 4. Count words for each review & comment
 token_counts <- tokens %>%
   count(review_id, document, word, sort = TRUE)
 
-# 5. Compute TF-IDF
 tfidf_data <- token_counts %>%
   bind_tf_idf(word, review_id, n)
 
-# 6. Aggregate the TF-IDF per review and per comment.
-#    Here, we take the average TF-IDF, though you might experiment with sum, median, etc.
 review_features <- tfidf_data %>%
   group_by(review_id, document) %>%
   summarise(avg_tf_idf = mean(tf_idf), .groups = "drop")
 
-# 7. Join the aggregated numeric feature(s) back to your original data (including Rating).
-#    (Make sure "Rating" is in your original data and that review_id is common.)
 coffee_features <- coffee %>%
   select(review_id, Rating) %>%
   left_join(review_features, by = "review_id")
 
-# 8. Perform the correlation analysis.
-#    Here, we calculate the correlation for each comment column (document).
+#  correlation analysis.
 cor_results <- coffee_features %>%
   group_by(document) %>%
   summarise(correlation = cor(avg_tf_idf, Rating, use = "complete.obs"))
@@ -276,6 +256,193 @@ print(cor_results)
 ```
 Reviewers tend to give harsher ratings when using distinctive words in the order of A > B > C >D
 
+LDA: (this takes a while to run)
+Identify latent topics in the reviews to understand common themes.
 ```{r}
+library(topicmodels)
+# Create a document-term matrix from long-format data
+documents <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D),
+               names_to = "document",
+               values_to = "text") %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words, by = "word") %>%
+  count(document, review_id, word, sort = TRUE) %>%
+  ungroup()
 
+documents <- documents %>%
+  mutate(doc_id = paste(document, review_id, sep = "_"))
+
+# cast to a sparse matrix
+dtm <- documents %>%
+  cast_dtm(document = doc_id, term = word, value = n)
+
+lda_model <- LDA(dtm, k = 7, control = list(seed = 1234))
+
+# Extract topics per document
+topics <- tidy(lda_model, matrix = "beta")
+top_terms <- topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  arrange(topic, -beta)
+
+print(top_terms)
+```
+Beta: estimated probability of a word given a topic
+Notable words
+k = 5: sweet, chocolate, fruit
+k = 3: sweet, fruit
+k = 7: chocolate, fruit
+
+N-gram Analysis
+Investigate bigrams & trigrams to capture context that individual words might miss.
+```{r}
+bigram <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D), names_to = "document", values_to = "text") %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  separate(bigram, into = c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word,
+         !word2 %in% stop_words$word) %>%
+  unite(bigram, word1, word2, sep = " ") %>%
+  count(document, bigram, sort = TRUE) %>%
+  group_by(document) %>%
+  slice_max(order_by = n, n = 15) %>%
+  ungroup()
+
+ggplot(bigram, aes(x = reorder(bigram, n), y = n)) +
+  geom_col(fill = "steelblue") +
+  facet_wrap(~ document, scales = "free_y") +
+  coord_flip() +
+  labs(title = "Top 15 Bigrams per Column", x = "Bigram", y = "Frequency") +
+  theme(axis.text.y = element_text(angle = 335, size = 5))
+```
+```{r}
+trigrams <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D), 
+               names_to = "document", 
+               values_to = "text") %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  separate(trigram, into = c("word1", "word2", "word3"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word,
+         !word2 %in% stop_words$word,
+         !word3 %in% stop_words$word) %>%
+  unite(trigram, word1, word2, word3, sep = " ") %>%
+  count(document, trigram, sort = TRUE) %>%
+  group_by(document) %>%
+  slice_max(order_by = n, n = 15) %>%
+  ungroup()
+
+ggplot(trigrams, aes(x = reorder(trigram, n), y = n)) +
+  geom_col(fill = "darkgreen") +
+  facet_wrap(~ document, scales = "free_y") +
+  coord_flip() +
+  labs(title = "Top 15 Trigrams per Column",
+       x = "Trigram", y = "Frequency") +
+  theme(axis.text.y = element_text(angle = 335, size = 5))
+```
+
+Temporal Analysis
+```{r}
+temporal_sentiment <- coffee %>%
+  mutate(year = lubridate::year(review_date_adj)) %>%
+  left_join(sentiment_bing, by = "review_id") %>%
+  group_by(year) %>%
+  summarise(avg_sentiment = mean(net_sentiment, na.rm = TRUE))
+
+ggplot(temporal_sentiment, aes(x = year, y = avg_sentiment)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Temporal Trend of Average Sentiment",
+       x = "Year", y = "Average Net Sentiment") +
+  theme_minimal()
+```
+Reviews have generally became more positive.
+
+
+Sentiment Analysis: Bing Lexicon
+Compare sentiment scores calculated with different lexicons to see which one correlates best with review Rating and how the sentiments differ by comment column.
+```{r}
+# Calculate Bing sentiment scores and net sentiment:
+sentiment_bing <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D), 
+               names_to = "document", 
+               values_to = "text") %>%
+  unnest_tokens(word, text) %>%
+  inner_join(get_sentiments("bing"), by = "word") %>%
+  count(review_id, document, sentiment) %>%
+  pivot_wider(names_from = sentiment, 
+              values_from = n, 
+              values_fill = list(n = 0)) %>%
+  mutate(net_sentiment = positive - negative)
+
+# Join with the Rating column:
+sentiment_data <- coffee %>%
+  select(review_id, Rating) %>%
+  left_join(sentiment_bing, by = "review_id")
+
+# Create a faceted plot for all documents in one figure:
+ggplot(sentiment_data, aes(x = net_sentiment, y = Rating)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ document) +
+  labs(title = "Sentiment vs. Rating (Bing Lexicon)",
+       x = "Net Sentiment (Positive - Negative)", 
+       y = "Rating") +
+  theme_minimal()
+```
+
+
+Sentiment Analysis: AFINN
+Provides numeric sentiment scores for words
+Get a continuous sentiment score that tells how strongly positive or negative the text is.
+```{r}
+afinn_sentiment <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D),
+               names_to = "document",
+               values_to = "text") %>%
+  unnest_tokens(word, text) %>%
+  inner_join(get_sentiments("afinn"), by = "word") %>%
+  group_by(review_id, document) %>%
+  summarise(net_sentiment = sum(value, na.rm = TRUE), .groups = "drop")
+
+afinn_sentiment_with_rating <- afinn_sentiment %>%
+  left_join(coffee %>% select(review_id, Rating), by = "review_id")
+
+ggplot(afinn_sentiment_with_rating, aes(x = net_sentiment, y = Rating)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ document) +
+  labs(title = "AFINN Net Sentiment vs. Rating by Document",
+       x = "Net AFINN Sentiment", y = "Rating") +
+  theme_minimal()
+```
+A positive net sentiment means that, overall, the words in that review contribute positive values and vice versa.
+
+Sentiment Analysis NRC
+Assigns words to multiple emotion categories
+Explore the mix of emotions present in the reviews.
+```{r}
+nrc_sentiment <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D),
+               names_to = "document",
+               values_to = "text") %>%
+  unnest_tokens(word, text) %>%
+  inner_join(get_sentiments("nrc"), by = "word") %>%
+  filter(sentiment %in% c("positive", "negative")) %>%  # Keep only positive/negative categories for net sentiment
+  count(review_id, document, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = list(n = 0)) %>%
+  mutate(net_sentiment = positive - negative)
+
+nrc_sentiment_with_rating <- nrc_sentiment %>%
+  left_join(coffee %>% select(review_id, Rating), by = "review_id")
+  ggplot(nrc_sentiment_with_rating, aes(x = net_sentiment, y = Rating)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ document) +
+  labs(title = "NRC Net Sentiment vs. Rating by Document",
+       x = "Net NRC Sentiment (positive - negative)", y = "Rating") +
+  theme_minimal()
+```
+
+```{r}
 ```
