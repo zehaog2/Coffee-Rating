@@ -64,12 +64,35 @@ df <- data |>
   )
 ```
 
-```{r}
-
-```
 
 
 # EDA
+## Bar plots - 1 variable
+
+```{r}
+# png("../figures/roast_level_distribution.png", width=1500, height=1000, res=256)
+data |>
+  filter(!is.na(Roast.Level)) |>
+  ggplot(aes(x=Roast.Level)) +
+  geom_bar() + 
+  labs(
+    x = "Coffee Roast Level",
+    y = "Coffee Count",
+    title = "Most coffee is medium-light roasted."
+  )
+
+data |>
+  filter(!is.na()) |>
+  ggplot(aes(x=Roast.Level)) +
+  geom_bar() + 
+  labs(
+    x = "Coffee Roast Level",
+    y = "Coffee Count",
+    title = "Most coffee is medium-light roasted."
+  )
+
+```
+
 ## Roast level vs Rating
 ```{r}
 df |>

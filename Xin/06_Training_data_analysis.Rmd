@@ -1,0 +1,37 @@
+---
+title: "06_Training_data_analysis"
+author: "Xin Wang"
+date: "2025-04-13"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(LANG = "en")
+```
+
+
+```{r}
+library(tidyverse)
+```
+
+# Load data
+
+```{r}
+train_data <- read.csv("../data/clustering_train.csv")
+head(train_data)
+```
+
+# Check distributions
+```{r}
+train_data |>
+  # filter(!is.na(Agtron_whole)) |>
+  ggplot(aes(x=Agtron_whole)) +
+  geom_boxplot() + 
+  labs(
+    x = "",
+    title = ""
+  )
+  
+```
+
