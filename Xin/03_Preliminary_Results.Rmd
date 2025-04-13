@@ -80,17 +80,6 @@ data |>
     y = "Coffee Count",
     title = "Most coffee is medium-light roasted."
   )
-
-data |>
-  filter(!is.na()) |>
-  ggplot(aes(x=Roast.Level)) +
-  geom_bar() + 
-  labs(
-    x = "Coffee Roast Level",
-    y = "Coffee Count",
-    title = "Most coffee is medium-light roasted."
-  )
-
 ```
 
 ## Roast level vs Rating

@@ -8,6 +8,7 @@ output: html_document
 ```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 Sys.setenv(LANG = "en")
+rm(list = ls())
 ```
 
 
@@ -25,13 +26,12 @@ head(train_data)
 # Check distributions
 ```{r}
 train_data |>
-  # filter(!is.na(Agtron_whole)) |>
+  filter(!is.na(Agtron_whole)) |>
   ggplot(aes(x=Agtron_whole)) +
-  geom_boxplot() + 
+  geom_histogram() + 
   labs(
     x = "",
     title = ""
   )
-  
 ```
 
