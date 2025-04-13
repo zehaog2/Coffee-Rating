@@ -28,7 +28,7 @@ top_words <- coffee %>%
   unnest_tokens(word, coffee_origin_lower) %>%
   count(word, sort = TRUE) %>%
   slice_head(n = 100)
-top_words
+#top_words
 ```
 
 Here are the countries / regions where it appeared more than 100 times:ethiopia, columbia, kenya, guatemala, yirgacheffe (ethiopia), indonesia, costa rica, sumatra (indonesia), brazil, panama, sidamo (ethiopia), oromia(ethiopia), guji(ethiopia), salvador, boquete(panama), nyeri (kenya), huila (columbia), kona (hawaii), rwanda, cauca (columb), sidama (ethiopia), honduras, huehuetenango (guatemala), nicaragua, peru, hawaii, hawai'i, mexico, tarrazu (costa rica), gerais (brazil), guinea, papua (guinea), aceh (indonesia), antigua
@@ -126,7 +126,156 @@ coffee <- coffee %>%
 ```
 
 ```{r}
-coffee_ultimato <- coffee %>%
-  select( -`all_text`,-`Agtron`,-`Est. Price`,-`Roast Level`, -`roast_level`,-`coffee_origin_lower`,-`coffee_origin`,-`Est. Price`,-`Review Date`)
-write_csv(coffee_test, "~/Desktop/coffee_ultimato.csv")
+coffee <- coffee %>% #for more convenient typing
+  rename(A=`Blind Assessment`, B=`Notes`, C=`Who Should Drink It`, D=`Bottom Line`)
+
+coffee <- coffee %>% 
+  select(-`all_text`, -`Agtron`,-`Est. Price`,-`Roast Level`, -`roast_level`,-`coffee_origin_lower`,-`coffee_origin`,-`Est. Price`,-`Review Date`)
+write_csv(coffee, "~/Desktop/coffee_ultimato.csv")
+```
+
+Word Frequency Raw Count
+```{r}
+top_words_by_column <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D), names_to = "column", values_to = "text") %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words, by = "word") %>%
+  count(column, word, sort = TRUE) %>%
+  group_by(column) %>%
+  slice_max(order_by = n, n = 20) %>%
+  ungroup()
+
+ggplot(top_words_by_column, aes(x = reorder(word, n), y = n)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ column, scales = "free_y") +
+  labs(x = "Word", y = "Frequency", title = "Top 30 Words per Column") +
+  coord_flip()+
+  theme(axis.text.y = element_text(angle = 325, size = 5.7))
+```
+Word Frequency TF-IDF
+```{r}
+tfidf_data <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D),
+               names_to = "document",
+               values_to = "text") %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words, by = "word") %>%
+  filter(!(document == "B" & str_detect(word, "\\d"))) %>%
+  count(document, word, sort = TRUE) %>%
+  bind_tf_idf(word, document, n)
+
+tfidf_top <- tfidf_data %>%
+  group_by(document) %>%
+  top_n(20, tf_idf) %>%
+  ungroup() %>%
+  arrange(document, -tf_idf)
+
+ggplot(tfidf_top, aes(x = reorder_within(word, tf_idf, document), y = tf_idf, fill = document)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ document, scales = "free_y") +
+  coord_flip() +
+  scale_x_reordered() +
+  labs(x = "Word", y = "TF-IDF", title = "Top TF-IDF Words per Column") +
+  theme(axis.text.y = element_text(angle = 335, size = 6.5))
+```
+
+```{r}
+coffee <- coffee %>%
+  mutate(review_id = row_number())
+
+# 2. Pivot the comment columns into long format.
+#    Retain review_id and Rating (assuming the Rating column is named exactly "Rating").
+coffee_long <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D),
+               names_to = "document",
+               values_to = "text")
+
+# 3. Tokenize the text and remove stop words:
+tokens <- coffee_long %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words, by = "word")
+
+# 4. Count words in each review & document (each review's comment):
+token_counts <- tokens %>%
+  count(review_id, document, word, sort = TRUE)
+
+# 5. Compute TF-IDF.
+#    Here we treat each review (review_id) as a document. If you prefer to compute it separately for each comment column,
+#    you could use a composite key (e.g., paste(review_id, document, sep = "_")). For now, we assume review-level TF-IDF:
+tfidf_data <- token_counts %>%
+  bind_tf_idf(word, review_id, n)
+
+# 6. Summarize text features per review and per comment type.
+#    For example, calculate average TF-IDF (you could also compute total TF-IDF, etc.).
+review_features <- tfidf_data %>%
+  group_by(review_id, document) %>%
+  summarise(avg_tf_idf = mean(tf_idf), .groups = "drop")
+
+# 7. Join these text features back with the original ratings.
+coffee_features <- coffee %>%
+  select(review_id, Rating) %>%
+  left_join(review_features, by = "review_id")
+
+# 8. Visualize the relationship between average TF-IDF and Rating for each comment column.
+ggplot(coffee_features, aes(x = avg_tf_idf, y = Rating)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ document) +
+  labs(x = "Average TF-IDF", y = "Rating", title = "Rating vs Average TF-IDF by Comment Column") +
+  theme_minimal()
+```
+TF-IDF per review per comment type creates a numeric value representing the importance of words in the comments. We see that in A,B,C, reviewers tend to give lower ratings when using more distinctive language in the comment, and vice versa.
+
+```{r}
+ # 1. Create a unique review id if you don't have one already.
+coffee <- coffee %>%
+  mutate(review_id = row_number())
+
+# 2. Pivot comment columns (A, B, C, D) into long format.
+coffee_long <- coffee %>%
+  pivot_longer(cols = c(A, B, C, D),
+               names_to = "document",
+               values_to = "text")
+
+# 3. Tokenize and remove stop words:
+tokens <- coffee_long %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words, by = "word")
+
+# (Optional) Remove tokens containing numbers from specific documents if needed.
+tokens <- tokens %>%
+  filter(!(document == "B" & str_detect(word, "\\d")))
+
+# 4. Count words for each review & comment
+token_counts <- tokens %>%
+  count(review_id, document, word, sort = TRUE)
+
+# 5. Compute TF-IDF
+tfidf_data <- token_counts %>%
+  bind_tf_idf(word, review_id, n)
+
+# 6. Aggregate the TF-IDF per review and per comment.
+#    Here, we take the average TF-IDF, though you might experiment with sum, median, etc.
+review_features <- tfidf_data %>%
+  group_by(review_id, document) %>%
+  summarise(avg_tf_idf = mean(tf_idf), .groups = "drop")
+
+# 7. Join the aggregated numeric feature(s) back to your original data (including Rating).
+#    (Make sure "Rating" is in your original data and that review_id is common.)
+coffee_features <- coffee %>%
+  select(review_id, Rating) %>%
+  left_join(review_features, by = "review_id")
+
+# 8. Perform the correlation analysis.
+#    Here, we calculate the correlation for each comment column (document).
+cor_results <- coffee_features %>%
+  group_by(document) %>%
+  summarise(correlation = cor(avg_tf_idf, Rating, use = "complete.obs"))
+
+print(cor_results)
+```
+Reviewers tend to give harsher ratings when using distinctive words in the order of A > B > C >D
+
+```{r}
+
 ```
