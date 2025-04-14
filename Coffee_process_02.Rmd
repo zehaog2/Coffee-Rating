@@ -126,8 +126,8 @@ coffee <- coffee %>%
 ```
 
 ```{r}
-coffee <- coffee %>% #for more convenient typing
-  rename(A=`Blind Assessment`, B=`Notes`, C=`Who Should Drink It`, D=`Bottom Line`)
+#coffee <- coffee %>%
+#  rename(A=`Blind Assessment`, B=`Notes`, C=`Who Should Drink It`, D=`Bottom Line`)
 
 coffee <- coffee %>% 
   select(-`all_text`, -`Agtron`,-`Est. Price`,-`Roast Level`, -`roast_level`,-`coffee_origin_lower`,-`coffee_origin`,-`Est. Price`,-`Review Date`)
@@ -137,7 +137,7 @@ write_csv(coffee, "~/Desktop/coffee_ultimato.csv")
 Word Frequency Raw Count
 ```{r}
 top_words_by_column <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D), names_to = "column", values_to = "text") %>%
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`), names_to = "column", values_to = "text") %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words, by = "word") %>%
   count(column, word, sort = TRUE) %>%
@@ -155,7 +155,7 @@ ggplot(top_words_by_column, aes(x = reorder(word, n), y = n)) +
 Word Frequency TF-IDF
 ```{r}
 tfidf_data <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D),
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`),
                names_to = "document",
                values_to = "text") %>%
   unnest_tokens(word, text) %>%
@@ -185,7 +185,7 @@ coffee <- coffee %>%
 
 #Pivot the comment columns into long format.
 coffee_long <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D),
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`),
                names_to = "document",
                values_to = "text")
 
@@ -222,7 +222,7 @@ coffee <- coffee %>%
   mutate(review_id = row_number())
 
 coffee_long <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D),
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`),
                names_to = "document",
                values_to = "text")
 
@@ -262,7 +262,7 @@ Identify latent topics in the reviews to understand common themes.
 library(topicmodels)
 # Create a document-term matrix from long-format data
 documents <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D),
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`),
                names_to = "document",
                values_to = "text") %>%
   unnest_tokens(word, text) %>%
@@ -277,7 +277,7 @@ documents <- documents %>%
 dtm <- documents %>%
   cast_dtm(document = doc_id, term = word, value = n)
 
-lda_model <- LDA(dtm, k = 7, control = list(seed = 1234))
+lda_model <- LDA(dtm, k = 5, control = list(seed = 1234))
 
 # Extract topics per document
 topics <- tidy(lda_model, matrix = "beta")
@@ -298,7 +298,7 @@ N-gram Analysis
 Investigate bigrams & trigrams to capture context that individual words might miss.
 ```{r}
 bigram <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D), names_to = "document", values_to = "text") %>%
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`), names_to = "document", values_to = "text") %>%
   unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
   separate(bigram, into = c("word1", "word2"), sep = " ") %>%
   filter(!word1 %in% stop_words$word,
@@ -318,7 +318,7 @@ ggplot(bigram, aes(x = reorder(bigram, n), y = n)) +
 ```
 ```{r}
 trigrams <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D), 
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`), 
                names_to = "document", 
                values_to = "text") %>%
   unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
@@ -364,7 +364,7 @@ Compare sentiment scores calculated with different lexicons to see which one cor
 ```{r}
 # Calculate Bing sentiment scores and net sentiment:
 sentiment_bing <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D), 
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`), 
                names_to = "document", 
                values_to = "text") %>%
   unnest_tokens(word, text) %>%
@@ -397,7 +397,7 @@ Provides numeric sentiment scores for words
 Get a continuous sentiment score that tells how strongly positive or negative the text is.
 ```{r}
 afinn_sentiment <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D),
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`),
                names_to = "document",
                values_to = "text") %>%
   unnest_tokens(word, text) %>%
@@ -423,7 +423,7 @@ Assigns words to multiple emotion categories
 Explore the mix of emotions present in the reviews.
 ```{r}
 nrc_sentiment <- coffee %>%
-  pivot_longer(cols = c(A, B, C, D),
+  pivot_longer(cols = c(`Blind Assessment`, `Notes`, `Who Should Drink It`,`Bottom Line`),
                names_to = "document",
                values_to = "text") %>%
   unnest_tokens(word, text) %>%
@@ -445,4 +445,5 @@ nrc_sentiment_with_rating <- nrc_sentiment %>%
 ```
 
 ```{r}
+
 ```
