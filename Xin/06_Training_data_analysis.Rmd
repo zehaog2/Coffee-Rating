@@ -19,19 +19,184 @@ library(tidyverse)
 # Load data
 
 ```{r}
-train_data <- read.csv("../data/clustering_train.csv")
-head(train_data)
+data <- read.csv("../data/clustered_coffee.csv")
+data$coffee_origin_adj[data$coffee_origin_adj == ""] <- NA
+data$continent[data$continent == ""] <- NA
+head(data)
+```
+# Cluster & Rating
+```{r}
+# 1. Calculate the frequency
+value_counts <- table(data$kmeans_pca_5)
+# print(value_counts)
+
+# 2. Convert the table into a data frame
+value_counts_df <- as.data.frame(value_counts)
+
+# 3. Create the bar plot
+ggplot(value_counts_df, aes(x = Var1, y = Freq)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Freq), vjust = -0.5) +
+  labs(
+    x = "Cluster Label", 
+    y = "Coffee Count", 
+    title = "Coffee cluster distribution")
 ```
 
-# Check distributions
 ```{r}
-train_data |>
-  filter(!is.na(Agtron_whole)) |>
-  ggplot(aes(x=Agtron_whole)) +
-  geom_histogram() + 
+data |>
+  ggplot(aes(x=factor(kmeans_pca_5), y=Rating)) +
+  geom_boxplot() +
   labs(
-    x = "",
-    title = ""
+    x = "Cluster Label",
+    y = "Rating",
+    title = "Cluster 5 - Lowest & Cluster 0 - Highest."
   )
 ```
+
+
+# Cluster & Price
+```{r}
+data |>
+  ggplot(aes(x=factor(kmeans_pca_5), y=usd_per_100g_adj)) +
+  geom_boxplot(na.rm = TRUE) +
+  labs(
+    x = "Cluster Label",
+    y = "Adjusted Price (USD/100g)",
+    title = "Cluster 1 tends to have larger variation in prices."
+  )
+```
+
+
+# Cluster & Acidity
+```{r}
+data |>
+  ggplot(aes(x=factor(kmeans_kpca_gamma005_5), y=Acidity_combined)) +
+  geom_boxplot() +
+  labs(
+    x = "Cluster Label",
+    y = "Acidity",
+    title = "No variation in 4 clusters' acidity scores."
+  )
+```
+
+
+```{r}
+data %>%
+  group_by(kmeans_kpca_gamma005_5) %>%
+  summarise(
+    mean_value = mean(Acidity_combined, na.rm = TRUE),
+    median_value = median(Acidity_combined, na.rm = TRUE),
+    sd_value = sd(Acidity_combined, na.rm = TRUE),
+    min_value = min(Acidity_combined, na.rm = TRUE),
+    max_value = max(Acidity_combined, na.rm = TRUE),
+    n = n()
+  )
+```
+
+
+
+
+
+
+
+# Cluster & Origin
+```{r}
+cluster_counts <- data |>
+  filter(!is.na(coffee_origin_adj)) |>
+  group_by(hierarchical_ward_2, coffee_origin_adj)|>
+  summarise(count = n(), .groups = 'drop')
+
+# Calculate the frequency rate for each country within each cluster
+total_clusters <- data |>
+  group_by(hierarchical_ward_2) |>
+  summarise(total_count = n(), .groups = 'drop')
+
+# Check for any NA values after conversion
+print(sum(is.na(cluster_counts$count)))  # Check for NA in 'count'
+print(sum(is.na(total_clusters$total_count))) # Check for NA in 'total_count'
+
+# Join the counts with total clusters to calculate frequency
+cluster_with_frequency <- cluster_counts |>
+  left_join(total_clusters, by = "hierarchical_ward_2") |>
+  mutate(frequency_rate = count / total_count)
+
+# View the result
+print(cluster_with_frequency)
+```
+
+```{r}
+cluster_with_frequency |>
+  ggplot(aes(x=factor(hierarchical_ward_2), y=frequency_rate, fill=coffee_origin_adj)) + 
+  geom_bar(stat = "identity", position = "dodge")
+```
+
+
+
+# Cluster & Roast Level
+
+```{r}
+cluster_counts <- data |>
+  filter(!is.na(roast_lv_adj)) |>
+  group_by(cluster_label, roast_lv_adj)|>
+  summarise(count = n(), .groups = 'drop')
+
+# Calculate the frequency rate for each country within each cluster
+total_clusters <- data |>
+  group_by(cluster_label) |>
+  summarise(total_count = n(), .groups = 'drop')
+
+# Check for any NA values after conversion
+print(sum(is.na(cluster_counts$count)))  # Check for NA in 'count'
+print(sum(is.na(total_clusters$total_count))) # Check for NA in 'total_count'
+
+# Join the counts with total clusters to calculate frequency
+cluster_with_frequency <- cluster_counts |>
+  left_join(total_clusters, by = "cluster_label") |>
+  mutate(frequency_rate = count / total_count)
+
+# View the result
+print(cluster_with_frequency)
+
+cluster_with_frequency |>
+  ggplot(aes(x=factor(cluster_label), y=frequency_rate, fill=factor(roast_lv_adj))) + 
+  geom_bar(stat = "identity", position = "dodge")
+```
+
+
+
+
+
+
+
+
+# Cluster & Continent
+```{r}
+cluster_counts <- data |>
+  filter(!is.na(continent)) |>
+  group_by(cluster_label, continent)|>
+  summarise(count = n(), .groups = 'drop')
+
+# Calculate the frequency rate for each country within each cluster
+total_clusters <- data |>
+  group_by(cluster_label) |>
+  summarise(total_count = n(), .groups = 'drop')
+
+# Check for any NA values after conversion
+print(sum(is.na(cluster_counts$count)))  # Check for NA in 'count'
+print(sum(is.na(total_clusters$total_count))) # Check for NA in 'total_count'
+
+# Join the counts with total clusters to calculate frequency
+cluster_with_frequency <- cluster_counts |>
+  left_join(total_clusters, by = "cluster_label") |>
+  mutate(frequency_rate = count / total_count)
+
+# View the result
+print(cluster_with_frequency)
+
+cluster_with_frequency |>
+  ggplot(aes(x=factor(cluster_label), y=frequency_rate, fill=continent)) + 
+  geom_bar(stat = "identity", position = "dodge")
+```
+
 
