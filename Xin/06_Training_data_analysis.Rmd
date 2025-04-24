@@ -24,6 +24,21 @@ data$coffee_origin_adj[data$coffee_origin_adj == ""] <- NA
 data$continent[data$continent == ""] <- NA
 head(data)
 ```
+
+```{r}
+# unique(data$Roast.Level)
+# 
+# # Convert to an ordered factor (ensure column name is correct)
+# data$Roast.Level <- factor(
+#   data$Roast.Level, 
+#   levels = c("light", "medium-light", "medium", "medium-dark", "dark", "very dark"), 
+#   ordered = TRUE
+# )
+```
+
+
+
+
 # Cluster & Rating
 ```{r}
 # 1. Calculate the frequency

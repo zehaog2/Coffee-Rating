@@ -70,16 +70,32 @@ df <- data |>
 ## Bar plots - 1 variable
 
 ```{r}
-# png("../figures/roast_level_distribution.png", width=1500, height=1000, res=256)
-data |>
-  filter(!is.na(Roast.Level)) |>
-  ggplot(aes(x=Roast.Level)) +
-  geom_bar() + 
+png("../figures/roast_level_distribution.png", width=1500, height=1000, res=256)
+# data |>
+#   filter(!is.na(Roast.Level)) |>
+#   ggplot(aes(x=Roast.Level)) +
+#   geom_bar() + 
+#   labs(
+#     x = "Coffee Roast Level",
+#     y = "Coffee Count",
+#     title = "Most coffee is medium-light roasted."
+#   )
+
+# 1. Calculate the frequency
+value_counts <- table(data$Roast.Level)
+# print(value_counts)
+
+# 2. Convert the table into a data frame
+value_counts_df <- as.data.frame(value_counts)
+
+# 3. Create the bar plot
+ggplot(value_counts_df, aes(x = Var1, y = Freq)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Freq), vjust = -0.5) +
   labs(
-    x = "Coffee Roast Level",
-    y = "Coffee Count",
-    title = "Most coffee is medium-light roasted."
-  )
+    x = "Coffee Roast Level", 
+    y = "Coffee Count", 
+    title = "Most coffee is medium-light roasted.")
 ```
 
 ## Roast level vs Rating
