@@ -1,5 +1,5 @@
 # DS5110-Final-Project
-Analyzed datasets related to coffee/chocolate, cocoa, with my fellow huskies who, apparently loves these things too.
+Analyzed datasets related to coffee/chocolate, cocoa, with my fellow huskies who, apparently, enjoys these things too.
 
 ## Completed tasks:
 1. (03/03-Xin) Web scrapping reviews from https://www.coffeereview.com/review/. 8387 reviews were scrapped with review date ranging from Feb. 1997 to Mar. 2025 (data updated until 03/03/2025). [Visit Web Scrapping Codes](Web_Scrapping.ipynb)
